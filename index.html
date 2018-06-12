@@ -44,8 +44,8 @@
 					<p class="fragment">data records are replaced by one or more artificial identifiers called <em>pseudonyms</em></p>
 					<p class="fragment">pseudonyms make a data record less identifiable without sacrificing data analysis and processing</p>
 
-					<aside class="notes">
-						Oh hey, these are some notes. They'll be hidden in your presentation, but you can see them if you open the speaker notes window (hit »S« on your keyboard).
+					<aside class="notes" data-markdown>
+						- will repeat a lot of this later, but for folks unfamiliar with it... pseudonymization is:
 					</aside>
 				</section>
 
@@ -58,7 +58,7 @@
 					<p><span class="fragment">secure a dataset from identification</span></p>
 					<p><span class="fragment">🚨 <strong>GDPR</strong> 🚨</span></p>
 
-					<aside class="notes">
+					<aside class="notes" data-markdown>
 						- anything worth protecting is worth protecting well
 						- security through obscurity
 						- and it's kind of the law... have y'all heard of a little thing called GDPR?
@@ -80,6 +80,16 @@
 					<section>
 						<h2>IANAL</h2>
 						<h3 class="fragment">I am not a lawyer.</h3>
+
+						<aside class="notes" data-markdown>
+							- I am not a lawyer!
+							- don't ask me for legal advice
+							- as a note, we're going to skip a lot of the mechanics of GDPR to focus on the scope of this talk so we wont talk about:
+								- consent
+								- the difference between collectors or processors
+								- or how to know if it effects you or your org
+							- ask a lawyer these questions
+						</aside>
 					</section>
 
 					<section>
@@ -89,9 +99,7 @@
 
 						<p class="fragment"><strong>May 25, 2018</strong></p>
 
-						<aside class="notes">
-							-
-							-
+						<aside class="notes" data-markdown>
 							- anyone know when it went into effect?
 						</aside>
 					</section>
@@ -160,13 +168,11 @@
 							Any information that is owned by an individual, or that could identify a user, is now off-limits for most purposes without proper consent.
 						</p>
 
-						<aside class="notes">
-							it's important to define exactly what type of data this is all
+						<aside class="notes" data-markdown>
+							- it's important to define exactly what type of data this is all
 							referencing...
 
-							<br>
-
-							the gist is that it's any personal data, we call this personally identifiable data, or PII
+							- the gist is that it's any personal data, we call this personally identifiable data, or PII
 							but GDPR just calls it "personal data". GDPR paints in very broad strokes.
 						</aside>
 					</section>
@@ -205,7 +211,7 @@
 
 					<aside class="notes" data-markdown>
 						- BREXIT anyone?
-						- the redulation applies to all 28 members of the EU
+						- GDPR applies to all 28 members of the EU
 						- under the regulation, any citizen of the EU is protected
 						- so this should only concern you if you're collecting data from someone that's an EU citizen right?...
 					</aside>
@@ -223,11 +229,16 @@
 					</p>
 
 					<aside class="notes" data-markdown>
-						- extends the regulation directly to a US web hosting company, for example, or an outsourced BPO firm, a Filipino technical support service, or any number of foreign service providers that in the past operated outside the scope of European law, when those services are used by a European data controller.
+						- ever heard the expression "the long arm of the law"?
+						- GDPR is basically the Mr. Fantastic of Data Regulations! It has some very long and flexible arms!
 
-						- also arguably applies to the activities of a US headquarters or affiliate in handling personal data in support of the activities of a European subsidiary.
+						ok, some legal jargon:
 
-						- also extends jurisdiction to controllers or processors with no establishment in the EU, if they offer goods or services to EU residents or monitor their behavior (this is especially significant since the GDPR extends the definition of “personal data” to include “online identifiers”).
+						- this Article extends the regulation directly to a US web hosting company, for example, or an outsourced BPO firm, a Filipino technical support service, or any number of foreign service providers that in the past operated outside the scope of European law, when those services are used by a European data controller.
+
+						- it also arguably applies to the activities of a US headquarters or affiliate in handling personal data in support of the activities of a European subsidiary.
+
+						- and it also extends jurisdiction to controllers or processors with no establishment in the EU, if they offer goods or services to EU residents or monitor their behavior (this is especially significant since the GDPR extends the definition of “personal data” to include “online identifiers”).
 
 					</aside>
 				</section>
@@ -265,6 +276,7 @@
 						</p>
 					</section>
 				</section>
+
 
 				<!-- #7 - Pseudonymization -->
 				<section>
@@ -326,6 +338,7 @@
 						</aside>
 					</section>
 				</section>
+
 
 				<!-- #8 - Simple Example -->
 				<section>
@@ -449,6 +462,7 @@ user._name => Gsbol Wbmdbsdfm
 					</section>
 				</section>
 
+
 				<!-- #9 - Django -->
 				<section>
 					<section>
@@ -472,7 +486,169 @@ class User(AbstractUser):
 						<p class="fragment">which fields are personal data?</p>
 						<p class="fragment"><strong>ALL OF THEM</strong></p>
 					</section>
+
+					<section>
+
+						<p><code>utils.py</code></p>
+
+							<pre><code class="hljs lang-python" data-trim>
+def shift(string, reverse=False):
+    """Shift ord value of character within range."""
+    new_string = []
+    for char in string:
+        try:
+            value = ord(char)...
+            new_string.append(chr(values[index % len(values)]))
+        except:
+            new_string.append(char)
+    return ''.join(new_string)
+
+def mask(value):
+    return shift(value)
+
+def unmask(value):
+    return shift(value, True)
+							</code></pre>
+
+						<aside class="notes" data-markdown>
+							- we're going to take our code from the simple example and create a utils file
+							- remember, the masking algorithm was incredibly simle... don't use that it production!
+							- to keep this talk short, I'm going to focus on the name field, since it ties back to our simple example and easy to follow.
+						</aside>
+					</section>
+
+					<section>
+
+						<p>Updated <code>user/models.py</code></p>
+
+							<pre><code class="hljs lang-python" data-trim>
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+from app.utils import mask, unmask
+
+class User(AbstractUser):
+    _name = models.CharField(max_length=128, blank=True)
+
+    @property
+    def name(self):
+        return unmask(self._name)
+
+    @name.setter
+    def name(self, value):
+        self._name = mask(value)
+							</code></pre>
+
+						<aside class="notes" data-markdown>
+							- we're going to take our code from the simple example and create a utils file
+							- remember, the masking algorithm was incredibly simle... don't use that it production!
+							- to keep this talk short, I'm going to focus on the name field, since it ties back to our simple example and easy to follow.
+						</aside>
+					</section>
 				</section>
+
+
+				<section>
+					<h2>Are we done?</h2>
+
+					<img class="fragment" src="https://media.giphy.com/media/dqmpS64HsNvb2/giphy.gif">
+
+					<aside class="notes" data-markdown>
+						- we're going to take our code from the simple example and create a utils file
+					</aside>
+				</section>
+
+				<section>
+					<section>
+						<h2>Checklist</h2>
+
+						<p class="fragment">☐ Update the QuerySet</p>
+						<p class="fragment">☐ Exclude pseudonyms</p>
+						<p class="fragment">☐ Update django-admin</p>
+
+						<aside class="notes" data-markdown>
+							- we want to filter our pseudonyms from the model object that we interact with in the application
+							- the model's queryset doesn't yet support our properties
+							- the django-admin won't work yet, it doesn't know how to exclude the pseudonyms or write to our setters and mask our values
+						</aside>
+					</section>
+
+					<section>
+						<h2>Update the QuerySet (1)</h2>
+
+						<p>as defined, our model can not be queried using any of the unmasked values. e.g. we can not call methods like: <code>User.objects.filter(name='Frank')</code></p>
+
+						<p>to get this working, we're going to overide our model's <code>QuerySet</code>, more specifically the <code>_filter_or_exclude</code> method</p>
+
+        				<aside class="notes" data-markdown>
+        					- we could override many more queryset methods, but this is where we're going to focus for the scope of this talk
+        				</aside>
+					</section>
+
+					<section>
+						<h2>Update the QuerySet (2)</h2>
+
+						<p>let's look at the source code... <a href="https://docs.djangoproject.com/en/2.0/_modules/django/db/models/query/" target="_blank">django.db.models.query</a></p>
+					</section>
+
+					<section>
+						<h2>Update the QuerySet (3)</h2>
+
+						<p>so let's just insert our masked values in, and <code>super</code> the parent instance of <code>models.QuerySet</code> for everything else</p>
+					</section>
+
+					<section>
+						<h2>Update the QuerySet (4)</h2>
+
+						<pre><code class="hljs lang-python" data-trim>
+class UserQuerySet(models.QuerySet):
+    def _filter_or_exclude(self, negate, *args, **kwargs):
+
+        masked_fields = ['name']
+
+        for field in masked_fields:
+            value = kwargs.pop(field, None)
+            if value is not None:
+                kwargs['_{}'.format(field)] = mask(value)
+
+        return super(UserQuerySet, self)._filter_or_exclude(negate, *args, **kwargs)
+						</code></pre>
+					</section>
+
+					<section>
+						<h2>Update the QuerySet (5)</h2>
+
+						<p>To finish this, we override the <code>BaseUserManager.get_queryset</code></p>
+
+						<pre><code class="hljs lang-python" data-trim>
+class UserManager(BaseUserManager):
+    def get_queryset(self):
+        return UserQuerySet(self.model)
+
+class User(AbstractUser):
+	...
+	objects = UserManager()
+						</code></pre>
+
+					<p>✅ <code>User.objects.filter(name='Frank')</code> <br>✅ <code>User.objects.exclude(name='Frank')</code></p>
+
+					</section>
+
+					<section>
+						<h2>Checklist</h2>
+
+						<p>☑️ Update the QuerySet</p>
+						<p>☐ Exclude pseudonyms</p>
+						<p>☐ Update django-admin</p>
+
+						<aside class="notes" data-markdown>
+							- ok, now lets filter out our pseudonyms
+						</aside>
+					</section>
+
+				</section>
+
+				<!-- // end of slides -->
 			</div>
 		</div>
 
