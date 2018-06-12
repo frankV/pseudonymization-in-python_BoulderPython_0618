@@ -563,7 +563,7 @@ class User(AbstractUser):
 						<h2>Checklist</h2>
 
 						<p class="fragment">☐ Update the QuerySet</p>
-						<p class="fragment">☐ Exclude pseudonyms</p>
+						<p class="fragment">☐ Exclude Pseudonyms</p>
 						<p class="fragment">☐ Update django-admin</p>
 
 						<aside class="notes" data-markdown>
@@ -638,11 +638,57 @@ class User(AbstractUser):
 						<h2>Checklist</h2>
 
 						<p>☑️ Update the QuerySet</p>
-						<p>☐ Exclude pseudonyms</p>
+						<p>☐ Exclude Pseudonyms</p>
 						<p>☐ Update django-admin</p>
 
 						<aside class="notes" data-markdown>
 							- ok, now lets filter out our pseudonyms
+						</aside>
+					</section>
+
+					<section>
+						<h2>Exclude Pseudonyms (1)</h2>
+
+						<p>pseudonyms are useless and will pollute our models</p>
+						<p>django has this method <code>defer</code> we can call on QuerySets so let's look at the source code again... <a href="https://docs.djangoproject.com/en/2.0/ref/models/querysets/#defer" target="_blank">QuerySet.defer()</a></p>
+					</section>
+
+					<section>
+						<h2>Exclude Pseudonyms (2)</h2>
+
+						<p>This will be an easy addition now that we override <code>models.QuerySet</code></p>
+
+						<pre><code class="hljs lang-python" data-trim>
+class UserQuerySet(models.QuerySet):
+    def _filter_or_exclude(self, negate, *args, **kwargs):
+
+        masked_fields = ['name']
+        unmasked_fields = [f'_{field}' for field in masked_fields]
+
+        for field in masked_fields:
+            value = kwargs.pop(field, None)
+            if value is not None:
+                kwargs[f'_{field}'] = mask(value)
+
+        return super(UserQuerySet, self)._filter_or_exclude(negate, *args, **kwargs).defer(*unmasked_fields)
+						</code></pre>
+
+						<aside class="notes" data-markdown>
+							- we added an unmasked_fields list, which is a comprehension of all fields from the masked list that start with '_'
+							- we're then appending the defer method to our returned QuerySet
+						</aside>
+					</section>
+
+
+					<section>
+						<h2>Checklist</h2>
+
+						<p>☑️ Update the QuerySet</p>
+						<p>☑️ Exclude Pseudonyms</p>
+						<p>☐ Update django-admin</p>
+
+						<aside class="notes" data-markdown>
+							- almost done
 						</aside>
 					</section>
 
