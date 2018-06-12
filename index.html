@@ -1,0 +1,515 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Pseudonymization Techniques in Python - Frank Valcarcel</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/solarized.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+
+	<body>
+		<div class="reveal">
+			<div class="slides">
+
+				<!-- #0 // Title Slide -->
+				<section>
+					<h1>Pseudonymization</h1>
+					<h3>Techniques in Python</h3>
+					<p>
+						<small><a href="https://twitter.com/fmdfrank">@fmdfrank</a></small>
+					</p>
+				</section>
+
+
+				<!-- #1 -->
+				<section>
+					<h2>What is pseudonymization?</h2>
+
+					<p class="fragment">a data de-identification procedure</p>
+					<p class="fragment">data records are replaced by one or more artificial identifiers called <em>pseudonyms</em></p>
+					<p class="fragment">pseudonyms make a data record less identifiable without sacrificing data analysis and processing</p>
+
+					<aside class="notes">
+						Oh hey, these are some notes. They'll be hidden in your presentation, but you can see them if you open the speaker notes window (hit »S« on your keyboard).
+					</aside>
+				</section>
+
+
+				<!-- #2 -->
+				<section>
+					<h2>Why would you do this?</h2>
+
+					<p><span class="fragment">protect user identities</span></p>
+					<p><span class="fragment">secure a dataset from identification</span></p>
+					<p><span class="fragment">🚨 <strong>GDPR</strong> 🚨</span></p>
+
+					<aside class="notes">
+						- anything worth protecting is worth protecting well
+						- security through obscurity
+						- and it's kind of the law... have y'all heard of a little thing called GDPR?
+					</aside>
+				</section>
+
+
+				<!-- #3 -->
+				<section>
+					<section>
+						<h2>We've Updated Our Privacy Policy</h2>
+
+						<aside class="notes">
+							- anyone get one of these emails last month?
+						</aside>
+					</section>
+
+
+					<section>
+						<h2>IANAL</h2>
+						<h3 class="fragment">I am not a lawyer.</h3>
+					</section>
+
+					<section>
+						<h2>General Data Protection Regulation (GDPR)</h2>
+
+						<p>A new set of EU-based policies about how companies can collect and use consumer data. GDPR passed in 2016, but that included a waiting period for companies to adjust.</p>
+
+						<p class="fragment"><strong>May 25, 2018</strong></p>
+
+						<aside class="notes">
+							-
+							-
+							- anyone know when it went into effect?
+						</aside>
+					</section>
+
+					<section>
+						<h2>The Rules</h2>
+
+						<p class="fragment">
+							<strong>Lawfulness, Fairness and Transparency</strong>
+						</p>
+
+						<p class="fragment">
+							<strong>Purpose Limitation</strong>
+						</p>
+
+						<p class="fragment">
+							<strong>Data Minimization</strong>
+						</p>
+
+						<p class="fragment">
+							<strong>Accuracy</strong>
+						</p>
+
+						<p class="fragment">
+							<strong>Storage Limitation</strong>
+						</p>
+
+						<p class="fragment">
+							<strong>Integrity and Transparency</strong>
+						</p>
+
+						<aside class="notes">
+							<ul>
+								<li>Lawfulness, fairness and transparency <br>
+									Data use must be lawful, fair, and transparent.
+								</li>
+								<li>Purpose Limitation <br>
+									Data use must be for specific and legitimate purposes.
+								</li>
+								<li>Data Minimization <br>
+									As little data as possible should be collected – only what’s required for your specific purposes.
+								</li>
+								<li>
+									Accuracy <br>
+									In-use data must be accurate and up to date at all times.
+								</li>
+								<li>
+									Storage Limitation <br>
+							  		Data must be stored for an appropriate amount of time; data should not be stored indefinitely.
+								</li>
+								<li>
+									Integrity and Transparency <br>
+							  		Data must be stored and processed securely.
+								</li>
+							</ul>
+							</p>
+						</aside>
+					</section>
+
+					<section>
+						<h2>Personal Data</h2>
+
+						<p>
+							GDPR sets a broad definition of what constitutes <em>personal data</em>.
+							<br><br>
+							Any information that is owned by an individual, or that could identify a user, is now off-limits for most purposes without proper consent.
+						</p>
+
+						<aside class="notes">
+							it's important to define exactly what type of data this is all
+							referencing...
+
+							<br>
+
+							the gist is that it's any personal data, we call this personally identifiable data, or PII
+							but GDPR just calls it "personal data". GDPR paints in very broad strokes.
+						</aside>
+					</section>
+
+					<section>
+						<h2>Personal Data (examples)</h2>
+
+						<ul>
+							<li>Full Names</li>
+							<li>Home Addresses</li>
+							<li>Email Addresses</li>
+							<li>Telephone Numbers</li>
+							<li>DOB and/or Birthplace</li>
+							<li>any Identification Numbers <br><em>(e.g. Driver's License, Passport, etc.)</em></li>
+						</ul>
+
+						<aside class="notes">
+							can you identify someone with it?
+							can it be used to identify someone with or without another data point?
+
+							<br>
+							if yes, or your unsure... it's probably personal data
+
+						</aside>
+					</section>
+				</section>
+
+
+				<!-- #4 -->
+				<section>
+					<h2>Who does this effect?</h2>
+
+					<p>Countries in the European Union (EU) <span class="fragment"><strong>...actually 🤔</strong></span>
+						<img height="470px" data-src="static/img/2000px-European_Union_map.svg.png" alt="the European Union">
+					</p>
+
+					<aside class="notes" data-markdown>
+						- BREXIT anyone?
+						- the redulation applies to all 28 members of the EU
+						- under the regulation, any citizen of the EU is protected
+						- so this should only concern you if you're collecting data from someone that's an EU citizen right?...
+					</aside>
+				</section>
+
+
+				<!-- #5 -->
+				<section>
+					<h2>Long-Arm Jurisdiction</h2>
+
+					<p>
+						<strong>Article 3(1)</strong>
+						<em>"applies to the processing of personal data in the context of the activities of an establishment of a controller or a processor in the Union,
+						regardless of whether the processing takes place in the Union or not"</em>
+					</p>
+
+					<aside class="notes" data-markdown>
+						- extends the regulation directly to a US web hosting company, for example, or an outsourced BPO firm, a Filipino technical support service, or any number of foreign service providers that in the past operated outside the scope of European law, when those services are used by a European data controller.
+
+						- also arguably applies to the activities of a US headquarters or affiliate in handling personal data in support of the activities of a European subsidiary.
+
+						- also extends jurisdiction to controllers or processors with no establishment in the EU, if they offer goods or services to EU residents or monitor their behavior (this is especially significant since the GDPR extends the definition of “personal data” to include “online identifiers”).
+
+					</aside>
+				</section>
+
+
+				<!-- #6 -->
+				<section>
+					<section>
+						<h2>Data Privacy Techniques</h2>
+
+						<p>🎉 no more legal stuff 🎉</p>
+					</section>
+
+					<section>
+						<h2>Two Popular Methods</h2>
+
+						<p>PSEUDONYMIZATION</p>
+
+						<p>ANONYMIZATION</p>
+					</section>
+
+					<section>
+						<h2>PSEUDONYMIZATION</h2>
+
+						<p>An approach for treating personal data so that it cannot be used to identify individual users without the use of additional information. Most techniques involve replacing data with a placeholder value, or pseudonym. This pseudonym may be a masked version of a record or a token used for retrieving the original value.</p>
+
+						<p class="fragment">Recommended by GDPR</p>
+					</section>
+
+
+					<section>
+						<h2>ANONYMIZATION</h2>
+
+						<p>A permanent de-identification of a data set so that no party will be able to identify the individuals in reference no matter what additional data they possess. Since anonymized data cannot be used to identify any individual, it is no longer considered personal data and as such does not fall under the purview of GDPR.
+						</p>
+					</section>
+				</section>
+
+				<!-- #7 - Pseudonymization -->
+				<section>
+					<section>
+						<h2>Pseudonymization Techniques</h2>
+					</section>
+
+					<section>
+						<h3>Data Masking</h3>
+
+						<p>altering or replacing a record or part of a record without changing its format. For example, an unmasked social security number (SSN) might be stored as <br>
+							<code>679-69-8549</code>, <br>
+							but a masked SSN using a technique to substitute the digits might look like <br> <code>145-126-7741</code>.
+						</p>
+
+						<aside class="notes" data-markdown>
+							- To mask data, characters in a record may be shuffled or substituted, and words may be substituted or obscured completely. The result is a realistic data set that cannot be reverse engineered or re-identified without additional information.
+							- there are a lot of techniques that fall under this broader category.
+						</aside>
+					</section>
+
+					<section>
+						<h3>Approximation</h3>
+
+						<p>
+							a technique for replacing specific personal data with less specific values. For example, if a user's date of birth is August 20, 1997, then an approximated record might be stored as July 1- September 25, 1997, or even just 1997..
+						</p>
+
+						<aside class="notes" data-markdown>
+							- This allows an organization to remove as much specific personal data as possible from a data set while still being able to derive useful information from it.
+						</aside>
+					</section>
+
+					<section>
+						<h3>Encryption</h3>
+
+						<p>
+							a cryptographic process that converts data into an unreadable format (ciphertext) so that only individuals or systems with access to the appropriate key can decrypt and read it.
+						</p>
+
+						<p class="fragment"><strong>No.</strong> Not mandatory according to GDPR</p>
+
+						<aside class="notes" data-markdown>
+							- we're probably familiar with this
+							- so is it required by GDRP?
+							- Data can be encrypted while in storage (at rest), and can also be encrypted when being shared or transferred (in transit). Note that there’s no one set of rules for when or how to encrypt personal data, and that encryption can place a heavy load on an application’s compute resources.
+						</aside>
+					</section>
+
+					<section>
+						<h3>Tokenization</h3>
+
+						<p>
+							tokenizing a piece of data is to replace it with a unique token that acts as a stand-in which can be used to retrieve the original value.
+						</p>
+
+						<aside class="notes" data-markdown>
+							- Tokenization is often used in payment processing solutions such as Apple Pay or PayPal.
+						</aside>
+					</section>
+				</section>
+
+				<!-- #8 - Simple Example -->
+				<section>
+					<section>
+						<h2>Simple Implementation Example</h2>
+
+						<p>
+							Python already supports a common pattern that allows an engineer to replace a attribute with a set of methods that can intercept values as they're written and read.
+						</p>
+
+						<p class="fragment">either <code>getter</code>/<code>setter</code> or <code>properties</code></p>
+
+						<aside class="notes" data-markdown>
+							- Python already supports a common pattern that allows an engineer to replace a attribute with a set of methods that can intercept values as they're written and read.
+							- any guesses as to what they are?
+						</aside>
+					</section>
+
+					<section>
+						<p>For the following examples we'll use an overly simplified data masking and unmasking algorithm</p>
+
+							<pre><code class="hljs lang-python" data-trim>
+def shift(string, reverse=False):
+    """Shift ord value of character within range."""
+
+    new_string = []
+
+    for char in string:
+        try:
+            value = ord(char)
+
+            if value in range(ord('A'), ord('Z') + 1):
+                min = ord('A')
+                max = ord('Z')
+            elif value in range(ord('a'), ord('z') + 1):
+                min = ord('a')
+                max = ord('z')
+
+            values = range(min, max + 1)
+
+            if reverse:
+                index = values.index(value) - 1
+            else:
+                index = values.index(value) + 1
+
+            new_string.append(chr(values[index % len(values)]))
+
+        except:
+            new_string.append(char)
+
+    return ''.join(new_string)
+							</code></pre>
+
+							<aside class="notes" data-markdown>
+							- this is really really simple, and incredibly easy to reverse engineer. DON'T DO THIS!
+						</aside>
+					</section>
+
+					<section>
+						<p>then to <code>mask</code> and <code>unmask</code>...</p>
+
+							<pre><code class="hljs lang-python" data-trim>
+def mask(value):
+    return shift(value)
+
+
+def unmask(value):
+    return shift(value, True)
+							</code></pre>
+					</section>
+
+					<section>
+						<p>looks something like:</p>
+
+						<pre><code class="hljs lang-python" data-trim>
+$ python simple.py Frank Valcarcel
+MASKING "Frank Valcarcel"
+MASKED "Gsbol Wbmdbsdfm"
+UNMASKED "Frank Valcarcel"
+						</code></pre>
+					</section>
+
+					<section>
+						<h2>Simple Implementation Example<br><small><code>getter/setter</code></small></h2>
+
+						<pre class="fragment preload"><code class="hljs lang-python" contenteditable data-trim>
+class User:
+    def __init__(self):
+        self._name = None
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+						</code></pre>
+
+						<aside class="notes" data-markdown>
+							- let's assume this class User, it has an attribute called `name` that qualifies as personal data
+							- here we have a getter/setter defined that allows us to store and retrieve the attribute for `_name`
+							- *edit textarea with the following examples
+								- if we want to add pseudonymization to the value when it's stored, then we only need to update the `property` method, `name`
+								- likewise, to re-identify the data on retrieval, we'd add a method on `name.setter`
+						</aside>
+					</section>
+
+					<section>
+						<p>looks something like:</p>
+
+						<pre><code class="hljs lang-python" data-trim>
+$ python
+>>> user = User()
+>>> user.name = "Frank Valcarcel"
+>>> print(f'user.name => {user.name}')
+user.name => Frank Valcarcel
+>>> print(f'user._name => {user._name}')
+user._name => Gsbol Wbmdbsdfm
+						</code></pre>
+					</section>
+				</section>
+
+				<!-- #9 - Django -->
+				<section>
+					<section>
+						<h2>django Example</h2>
+					</section>
+
+					<section>
+						<h2>A Simple django User Model</h2>
+
+						<pre><code class="hljs lang-python">
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+class User(AbstractUser):
+    name = models.CharField(max_length=128, blank=True)
+    phone = models.CharField(max_length=17, blank=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+						</code></pre>
+
+						<p class="fragment">which fields are personal data?</p>
+						<p class="fragment"><strong>ALL OF THEM</strong></p>
+					</section>
+				</section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				],
+				history: true,
+			});
+
+			// automatically load the initial fragment on a slide if the fragment
+			// has been defined with the 'preload' class
+			Reveal.addEventListener('slidechanged', function(event) {
+			  if (event.currentSlide.querySelectorAll('.preload[data-fragment-index="0"]').length > 0) {
+			    Reveal.nextFragment();
+			  }
+			});
+
+			// if the initial fragment on a slide has been defined with a 'preload' class
+			// then transition to the previous slide if the fragment is hidden
+			Reveal.addEventListener('fragmenthidden', function(event) {
+			  if (event.fragment.hasAttribute('data-fragment-index') && event.fragment.classList.contains('preload')) {
+			    if (event.fragment.attributes['data-fragment-index'].value == "0") {
+			      Reveal.prev();
+			    }
+			  }
+			});
+		</script>
+	</body>
+</html>
