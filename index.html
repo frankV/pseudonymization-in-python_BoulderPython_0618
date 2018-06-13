@@ -512,7 +512,7 @@ def unmask(value):
 
 						<aside class="notes" data-markdown>
 							- we're going to take our code from the simple example and create a utils file
-							- remember, the masking algorithm was incredibly simle... don't use that it production!
+							- remember, the masking algorithm was incredibly simple... don't use that it production!
 							- to keep this talk short, I'm going to focus on the name field, since it ties back to our simple example and easy to follow.
 						</aside>
 					</section>
@@ -521,7 +521,7 @@ def unmask(value):
 
 						<p>Updated <code>user/models.py</code></p>
 
-							<pre><code class="hljs lang-python" data-trim>
+						<pre><code class="hljs lang-python" data-trim>
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -540,9 +540,7 @@ class User(AbstractUser):
 							</code></pre>
 
 						<aside class="notes" data-markdown>
-							- we're going to take our code from the simple example and create a utils file
-							- remember, the masking algorithm was incredibly simle... don't use that it production!
-							- to keep this talk short, I'm going to focus on the name field, since it ties back to our simple example and easy to follow.
+							- now let's add the getter/setter to our `_name` field in our User model
 						</aside>
 					</section>
 				</section>
@@ -573,6 +571,7 @@ class User(AbstractUser):
 						</aside>
 					</section>
 
+					<!-- Update the QuerySet -->
 					<section>
 						<h2>Update the QuerySet (1)</h2>
 
@@ -618,10 +617,10 @@ class UserQuerySet(models.QuerySet):
 					<section>
 						<h2>Update the QuerySet (5)</h2>
 
-						<p>To finish this, we override the <code>BaseUserManager.get_queryset</code></p>
+						<p>To finish this, we override the <code>AuthUserManager.get_queryset</code></p>
 
 						<pre><code class="hljs lang-python" data-trim>
-class UserManager(BaseUserManager):
+class UserManager(AuthUserManager):
     def get_queryset(self):
         return UserQuerySet(self.model)
 
@@ -646,6 +645,7 @@ class User(AbstractUser):
 						</aside>
 					</section>
 
+					<!-- Exclude Pseudonyms -->
 					<section>
 						<h2>Exclude Pseudonyms (1)</h2>
 
@@ -679,6 +679,17 @@ class UserQuerySet(models.QuerySet):
 						</aside>
 					</section>
 
+					<section>
+						<h2>Exclude Pseudonyms (3)</h2>
+
+						<pre><code class="hljs lang-python" data-trim>
+>>> u = User.objects.filter(name='Frank Valcarcel')
+>>> u.__dict__
+{'id': 1, 'password': 'pbkdf2_sha256...=', 'last_login': datetime.datetime(2018, 6, 11, 16, 20, 19, 775436, tzinfo=<UTC>), 'is_superuser': True, 'username': 'frank', 'first_name': 'Frank', 'last_name': '', 'email': 'katie@cuttlesoft.com', 'is_staff': True, 'is_active': True, 'date_joined': datetime.datetime(2018, 6, 11, 16, 20, 14, 334272, tzinfo=<UTC>)}
+						</code></pre>
+
+						<p><strong>Note: </strong>I did not override the <code>all()</code> query, but query methods that call <code>filter</code> like <code>get</code> will behave this way.</p>
+					</section>
 
 					<section>
 						<h2>Checklist</h2>
@@ -688,10 +699,112 @@ class UserQuerySet(models.QuerySet):
 						<p>☐ Update django-admin</p>
 
 						<aside class="notes" data-markdown>
-							- almost done
+							- almost done!
 						</aside>
 					</section>
 
+					<!-- Update django-admin -->
+					<section>
+						<h2>Update django-admin (1)</h2>
+
+						<p>write/read is masked/unmasked... but what about the django-admin?</p>
+
+						<p>We need to update our admin so we can read and write appropriately
+
+						<aside class="notes" data-markdown>
+							- data on the object level is now automatically masked and unmasked... but what about the django-admin?
+							- our admin forms have no idea what to do with this model's pseudonymized attributes... so we gotta fix that
+						</aside>
+					</section>
+
+					<!-- Update django-admin -->
+					<section>
+						<h2>Update django-admin (2)</h2>
+
+						<pre><code class="hljs lang-python" data-trim>
+    class Meta:
+        model = User
+
+        fields = ('username', 'password', 'name')
+        				</code></pre>
+
+						<aside class="notes" data-markdown>
+							- first we should tell it which fields to use
+						</aside>
+					</section>
+
+					<section>
+						<h2>Update django-admin (3)</h2>
+
+						<pre><code class="hljs lang-python" data-trim>
+class UserChangeForm(AuthUserChangeForm):
+    name = forms.CharField()
+
+    def __init__(self, *args, **kwargs):
+        super(UserChangeForm, self).__init__(*args, **kwargs)
+        self.fields['name'].initial = self.instance.name
+
+        self.fields['name'].validators = self._meta.model._meta.get_field('_name').validators
+
+    def clean(self, *args, **kwargs):
+        super(UserChangeForm, self).clean(*args, **kwargs)
+        self.instance.name = self.cleaned_data.get('name')
+        				</code></pre>
+
+						<aside class="notes" data-markdown>
+							- next, let's begin to define a form that we can swap in place for the default one django wants to use
+							- you can see we're overriding the built-in UserChangeForm from django.contrib.auth.forms
+							- we're creating a form with a new Char field, name
+							- on initialization we get the correct value, and check it against the validator for our masked field
+							- so when the form's clean method is called, we can get the appropriate value, or error out on invalid input
+						</aside>
+					</section>
+
+					<section>
+						<h2>Update django-admin (4)</h2>
+
+						<pre><code class="hljs lang-python" data-trim>
+@admin.register(User)
+class UserAdmin(AuthUserAdmin):
+    form = UserChangeForm
+
+    fieldsets = [
+        (None, {'fields': ['username', 'password']}),
+        ('Personal Data', {'fields': [
+            'name',
+        ]}),
+    ]
+
+    list_display = ('username', 'name')
+        				</code></pre>
+
+						<aside class="notes" data-markdown>
+							- last we gotta register this sucker
+							- we have our base fields of the model, namely username and password, but now
+							- we created a group of subfields called personal data and added the `name` property to it
+							- last we told django-admin how we would like the user's to be displayed in the user's list
+						</aside>
+					</section>
+
+					<section>
+						<h2>Checklist</h2>
+
+						<p>☑️ Update the QuerySet</p>
+						<p>☑️ Exclude Pseudonyms</p>
+						<p>☑️ Update django-admin</p>
+
+						<aside class="notes" data-markdown>
+							- done!
+						</aside>
+					</section>
+
+				</section>
+
+				<section>
+					<h2>Wanna see a demo?</h2>
+
+					<!-- TODO: add link to live demo of django example -->
+					<p>coming soon</p>
 				</section>
 
 				<!-- // end of slides -->
@@ -702,9 +815,6 @@ class UserQuerySet(models.QuerySet):
 		<script src="js/reveal.js"></script>
 
 		<script>
-			// More info about config & dependencies:
-			// - https://github.com/hakimel/reveal.js#configuration
-			// - https://github.com/hakimel/reveal.js#dependencies
 			Reveal.initialize({
 				dependencies: [
 					{ src: 'plugin/markdown/marked.js' },
